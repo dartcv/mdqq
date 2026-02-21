@@ -388,7 +388,7 @@ object MainHook : YukiBaseHooker() {
                                 val tab2 = parent.findViewById<LinearLayout>(R.id.tab2)
                                 val tab3 = parent.findViewById<LinearLayout>(R.id.tab3)
                                 val tab4 = parent.findViewById<LinearLayout>(R.id.tab4)
-                                if (!GuildApi.isShowGuildTab()) tab4.visibility = View.GONE
+                                if (!GuildApi.isShowGuildTab()) tab3.visibility = View.GONE
                                 val tabs = listOf(tab1, tab2, tab3, tab4)
                                 val text1 = tab1.findViewById<TextView>(R.id.tab1_text)
                                 val text2 = tab2.findViewById<TextView>(R.id.tab2_text)
