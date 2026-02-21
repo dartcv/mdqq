@@ -14,3 +14,17 @@
 ## 🧩 项目图片
 
 ![项目图片](./images/3B135332F817AFEA79A9CDEE96C3DDF4.jpg)
+
+## 编译
+
+1.克隆仓库
+
+```bash
+git clone https://github.com/paditianxiu/mdqq.git
+```
+
+2.初始化并更新子模块
+
+```bash
+git submodule update --init --recursive
+```
