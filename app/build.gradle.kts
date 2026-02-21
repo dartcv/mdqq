@@ -1,3 +1,4 @@
+import com.android.build.gradle.internal.tasks.factory.dependsOn
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
@@ -86,11 +87,33 @@ dependencies {
 
     implementation(libs.material)
 
+    compileOnly(project(":libs:qqstub"))
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.test.espresso.core)
 
-    implementation("com.github.suzhelan:XpHelper:3.0")
+    implementation(libs.xphelper)
 
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
 }
+
+val adb: String = androidComponents.sdkComponents.adb.get().asFile.absolutePath
+val packageName = "com.tencent.mobileqq"
+val killQQ = tasks.register<Exec>("killQQ") {
+    group = "util"
+    commandLine(adb, "shell", "am", "force-stop", packageName)
+    isIgnoreExitValue = true
+}
+
+val openQQ = tasks.register<Exec>("openQQ") {
+    group = "util"
+    commandLine(adb, "shell", "am", "start", "$(pm resolve-activity --components $packageName)")
+    isIgnoreExitValue = true
+}
+
+val restartQQ = tasks.register<Exec>("restartQQ") {
+    group = "util"
+    commandLine(adb, "shell", "am", "start", "$(pm resolve-activity --components $packageName)")
+    isIgnoreExitValue = true
+}.dependsOn(killQQ)

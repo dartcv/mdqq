@@ -12,23 +12,11 @@ import android.graphics.Outline
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.os.SystemClock
-import android.transition.ChangeBounds
-import android.transition.Fade
-import android.transition.Transition
-import android.transition.TransitionManager
-import android.transition.TransitionSet
-import android.view.Gravity
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
+import android.transition.*
+import android.view.*
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
-import android.view.ViewOutlineProvider
-import android.widget.FrameLayout
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.TextView
-import android.widget.Toast
+import android.widget.*
 import androidx.appcompat.widget.AppCompatImageView
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toDrawable
@@ -39,11 +27,15 @@ import com.highcapable.kavaref.KavaRef.Companion.asResolver
 import com.highcapable.kavaref.KavaRef.Companion.resolve
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
 import com.highcapable.yukihookapi.hook.factory.applyModuleTheme
+import de.robv.android.xposed.XposedBridge
 import me.padi.nbhook.R
+import me.padi.nbhook.api.GuildApi
 import me.padi.nbhook.library.FloatingActionButton.FloatingActionButton
 import me.padi.nbhook.library.FloatingActionButton.FloatingActionMenu
+import me.padi.nbhook.util.HybridClassLoader
 import top.sacz.xphelper.XpHelper
 import top.sacz.xphelper.dexkit.DexFinder
+import java.lang.reflect.Field
 import kotlin.math.roundToInt
 
 object MainHook : YukiBaseHooker() {
@@ -59,8 +51,8 @@ object MainHook : YukiBaseHooker() {
                 val appContext = instance<Context>()
                 XpHelper.initContext(appContext)
                 val loader = appContext.classLoader
-
-
+                HybridClassLoader.hostClassLoader = loader
+                injectClassLoader()
                 "com.tencent.biz.qui.noticebar.view.VQUINoticeBarLayout".toClass(loader).resolve()
                     .firstConstructor {}.hook {
                         after {
@@ -182,6 +174,7 @@ object MainHook : YukiBaseHooker() {
                 }.hook {
                     after {
                         sQQAppInterface = instance
+
                     }
                 }
 
@@ -380,6 +373,7 @@ object MainHook : YukiBaseHooker() {
                             val parent =
                                 LayoutInflater.from(tabLayout.context.applyModuleTheme(R.style.Theme_AppDefault))
                                     .inflate(R.layout.material_tab, null)
+
                             tabLayout.post {
                                 val rootView = (tabLayout.parent as ViewGroup)
                                 val homeTabViewTag = "home_tab_view"
@@ -394,6 +388,9 @@ object MainHook : YukiBaseHooker() {
                                 val tab2 = parent.findViewById<LinearLayout>(R.id.tab2)
                                 val tab3 = parent.findViewById<LinearLayout>(R.id.tab3)
                                 val tab4 = parent.findViewById<LinearLayout>(R.id.tab4)
+                                // 若未启用频道选项 则不显示此Tab
+                                if (!GuildApi.isShowGuildTab()) tab3.visibility = View.GONE
+
                                 val tabs = listOf(tab1, tab2, tab3, tab4)
                                 val text1 = tab1.findViewById<TextView>(R.id.tab1_text)
                                 val text2 = tab2.findViewById<TextView>(R.id.tab2_text)
@@ -471,7 +468,7 @@ object MainHook : YukiBaseHooker() {
                                     tabLayout.asResolver().firstMethod {
                                         name = "setCurrentTab"
                                     }.invoke(
-                                        2
+                                        if (GuildApi.isShowGuildTab()) 2 else 1
                                     )
 
                                 }
@@ -516,7 +513,7 @@ object MainHook : YukiBaseHooker() {
                                     tabLayout.asResolver().firstMethod {
                                         name = "setCurrentTab"
                                     }.invoke(
-                                        3
+                                        if (GuildApi.isShowGuildTab()) 3 else 2
                                     )
                                 }
 
@@ -688,6 +685,22 @@ object MainHook : YukiBaseHooker() {
 
         rootView.addView(button)
     }
+
+    @SuppressLint("DiscouragedPrivateApi")
+    @Throws(Exception::class)
+    private fun injectClassLoader() {
+        val fParent: Field = ClassLoader::class.java.getDeclaredField("parent")
+        fParent.isAccessible = true
+        val mine = MainHook::class.java.classLoader
+        var curr: ClassLoader? = fParent.get(mine) as ClassLoader
+        if (curr == null) {
+            curr = XposedBridge::class.java.classLoader
+        }
+        if (curr!!.javaClass.name != HybridClassLoader::class.java.getName()) {
+            HybridClassLoader.setLoaderParentClassLoader(curr)
+            fParent.set(mine, HybridClassLoader.INSTANCE)
+        }
+    }
 }
 
 fun Context.startUri(uri: String) {
@@ -705,3 +718,4 @@ fun Context.dp2px(dp: Int): Int {
     val scale = this.getResources().getDisplayMetrics().density
     return (dp * scale).roundToInt()
 }
+
